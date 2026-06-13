@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архив заявок</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="container" style="padding:0;">
+                <h1><i class="fas fa-archive"></i> Архив заявок</h1>
+                <nav>
+                    <a href="/"><i class="fas fa-clipboard-list"></i> Активные</a>
+                    <a href="/archive" class="active"><i class="fas fa-archive"></i> Архив</a>
+                    <div class="user-nav" id="userNav"></div>
+                </nav>
+            </div>
+        </header>
+
+        <main>
+            <div class="quick-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <button onclick="loadRequests()" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Обновить</button>
+                <button onclick="exportCSV()" class="btn btn-secondary"><i class="fas fa-download"></i> Экспорт CSV</button>
+                <button onclick="createBackup()" class="btn btn-secondary"><i class="fas fa-database"></i> Бэкап</button>
+            </div>
+
+            <div class="table-container">
+                 <table>
+                    <thead>
+                         <tr>
+                            <th>ID</th><th>Клиент</th><th>Телефон</th><th>Категория</th><th>Приоритет</th><th>Статус</th><th>Дата</th><th>Действия</th>
+                         </tr>
+                    </thead>
+                    <tbody id="requestsBody"></tbody>
+                 </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно редактирования -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editModal')">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        async function checkAuth() {
+            const res = await fetch('/api/auth/check');
+            const data = await res.json();
+            if (!data.authenticated) {
+                window.location.href = '/login';
+                return;
+            }
+            currentUser = data.user;
+            document.getElementById('userNav').innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${currentUser.username[0].toUpperCase()}</div>
+                    <span>${currentUser.full_name || currentUser.username}</span>
+                </div>
+                <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+            `;
+            loadRequests();
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        async function loadRequests() {
+            const res = await fetch('/api/requests?status=архив');
+            const requests = await res.json();
+            const tbody = document.getElementById('requestsBody');
+            tbody.innerHTML = '';
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;"><i class="fas fa-inbox"></i> Архив пуст</td></tr>';
+                return;
+            }
+            requests.forEach(req => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerText = req.id;
+                row.insertCell(1).innerText = req.client_name;
+                row.insertCell(2).innerText = req.phone;
+                row.insertCell(3).innerText = req.category;
+
+                // Приоритет
+                let priorityClass = 'badge-priority-низкий';
+                if (req.priority === 'высокий') priorityClass = 'badge-priority-высокий';
+                if (req.priority === 'средний') priorityClass = 'badge-priority-средний';
+                row.insertCell(4).innerHTML = `<span class="badge ${priorityClass}">${req.priority}</span>`;
+
+                // Статус (всегда архив)
+                row.insertCell(5).innerHTML = `<span class="badge badge-status-архив">${req.status}</span>`;
+
+                row.insertCell(6).innerText = new Date(req.created_at).toLocaleString();
+
+                const actions = row.insertCell(7);
+                actions.className = 'actions-cell';
+                actions.innerHTML = `
+                    <button onclick="editRequest(${req.id})" class="btn-small btn-edit"><i class="fas fa-edit"></i> Редактировать</button>
+                    <button onclick="restoreFromArchive(${req.id})" class="btn-small btn-restore"><i class="fas fa-undo-alt"></i> Восстановить</button>
+                    <button onclick="deleteRequest(${req.id})" class="btn-small btn-delete"><i class="fas fa-trash-alt"></i> Удалить</button>
+                `;
+            });
+        }
+
+        async function restoreFromArchive(id) {
+            if (!confirm('Восстановить заявку из архива? Она станет активной со статусом "новая".')) return;
+            const res = await fetch(`/api/requests/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'новая' })
+            });
+            if (res.ok) {
+                alert('Заявка восстановлена');
+                loadRequests();
+            } else {
+                alert('Ошибка восстановления');
+            }
+        }
+
+        async function exportCSV() {
+            window.location.href = '/api/requests/export?status=архив';
+        }
+
+        async function createBackup() {
+            try {
+                const res = await fetch('/api/backups/create', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) alert('Бэкап создан: ' + data.backup.filename);
+                else alert('Ошибка создания бэкапа');
+            } catch (err) {
+                alert('Ошибка сети');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        async function editRequest(id) {
+            const res = await fetch(`/api/requests/${id}`);
+            const req = await res.json();
+            const commentsRes = await fetch(`/api/comments/${id}`);
+            const comments = await commentsRes.json();
+            const attachmentsRes = await fetch(`/api/requests/${id}/attachments`);
+            const attachments = await attachmentsRes.json();
+
+            let commentsHtml = '';
+            comments.forEach(c => {
+                commentsHtml += `<div style="padding:0.5rem; border-bottom:1px solid #eee;"><strong>${c.full_name || c.username}</strong> <small>${new Date(c.created_at).toLocaleString()}</small><br>${c.comment_text}</div>`;
+            });
+            let attachmentsHtml = '';
+            attachments.forEach(a => {
+                attachmentsHtml += `<div><a href="${a.filepath}" target="_blank">${a.original_name}</a> (${(a.filesize/1024).toFixed(1)} KB) <button onclick="deleteAttachment(${a.id}, ${id})" class="btn-small btn-delete">Удалить</button></div>`;
+            });
+
+            document.getElementById('modalBody').innerHTML = `
+                <h2><i class="fas fa-edit"></i> Редактирование заявки #${id}</h2>
+                <form id="editForm">
+                    <div class="form-group"><label>Клиент *</label><input name="client_name" value="${escapeHtml(req.client_name)}" required></div>
+                    <div class="form-group"><label>Телефон *</label><input name="phone" value="${escapeHtml(req.phone)}" required></div>
+                    <div class="form-group"><label>Email</label><input name="email" value="${escapeHtml(req.email || '')}"></div>
+                    <div class="form-group"><label>Категория</label><select name="category">
+                        <option ${req.category==='общая'?'selected':''}>общая</option>
+                        <option ${req.category==='техническая'?'selected':''}>техническая</option>
+                        <option ${req.category==='консультация'?'selected':''}>консультация</option>
+                    </select></div>
+                    <div class="form-group"><label>Приоритет</label><select name="priority">
+                        <option ${req.priority==='низкий'?'selected':''}>низкий</option>
+                        <option ${req.priority==='средний'?'selected':''}>средний</option>
+                        <option ${req.priority==='высокий'?'selected':''}>высокий</option>
+                    </select></div>
+                    <div class="form-group"><label>Статус</label><select name="status">
+                        <option ${req.status==='архив'?'selected':''}>архив</option>
+                        <option ${req.status==='новая'?'selected':''}>новая</option>
+                        <option ${req.status==='в обработке'?'selected':''}>в обработке</option>
+                        <option ${req.status==='выполнена'?'selected':''}>выполнена</option>
+                        <option ${req.status==='отклонена'?'selected':''}>отклонена</option>
+                    </select></div>
+                    <div class="form-group"><label>Описание *</label><textarea name="request_text" required>${escapeHtml(req.request_text)}</textarea></div>
+                    <div class="form-group"><label>Файлы</label><div id="attachmentsList">${attachmentsHtml || '<em>Нет файлов</em>'}</div>
+                    <input type="file" name="newFiles" multiple></div>
+                    <hr>
+                    <h4><i class="fas fa-comments"></i> Комментарии</h4>
+                    <div id="commentsList">${commentsHtml || '<em>Нет комментариев</em>'}</div>
+                    <textarea id="newComment" rows="3" placeholder="Добавить комментарий..." style="width:100%; margin-top:1rem;"></textarea>
+                    <div class="form-buttons">
+                        <button type="button" onclick="addComment(${id})" class="btn btn-secondary"><i class="fas fa-plus"></i> Добавить комментарий</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить изменения</button>
+                        <button type="button" onclick="closeModal('editModal')" class="btn btn-secondary">Отмена</button>
+                    </div>
+                </form>
+            `;
+            document.getElementById('editModal').style.display = 'flex';
+
+            document.getElementById('editForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                    client_name: formData.get('client_name'),
+                    phone: formData.get('phone'),
+                    email: formData.get('email'),
+                    category: formData.get('category'),
+                    priority: formData.get('priority'),
+                    status: formData.get('status'),
+                    request_text: formData.get('request_text')
+                };
+                const res = await fetch(`/api/requests/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    const files = formData.getAll('newFiles');
+                    if (files.length > 0 && files[0].size > 0) {
+                        const fileFormData = new FormData();
+                        files.forEach(file => fileFormData.append('files', file));
+                        await fetch(`/api/requests/${id}/attachments`, {
+                            method: 'POST',
+                            body: fileFormData
+                        });
+                    }
+                    alert('Сохранено');
+                    closeModal('editModal');
+                    loadRequests();
+                } else alert('Ошибка');
+            });
+        }
+
+        window.addComment = async function(requestId) {
+            const text = document.getElementById('newComment').value;
+            if (!text) return;
+            const res = await fetch('/api/comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_id: requestId, comment_text: text })
+            });
+            if (res.ok) editRequest(requestId);
+            else alert('Ошибка добавления комментария');
+        };
+
+        window.deleteAttachment = async function(attachmentId, requestId) {
+            if (!confirm('Удалить файл?')) return;
+            const res = await fetch(`/api/attachments/${attachmentId}`, { method: 'DELETE' });
+            if (res.ok) editRequest(requestId);
+            else alert('Ошибка удаления');
+        };
+
+        async function deleteRequest(id) {
+            if (!confirm('Удалить заявку навсегда?')) return;
+            const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert('Заявка удалена');
+                loadRequests();
+            } else alert('Ошибка');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            setInterval(() => {
+                if (currentUser) {
+                    loadRequests();
+                }
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

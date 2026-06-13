@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание заявки</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .form-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-section h2 {
+            color: #4a5568;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #667eea;
+            background: #ebf4ff;
+        }
+        
+        .file-list {
+            margin-top: 1rem;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f7fafc;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .file-icon {
+            font-size: 1.5rem;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .file-size {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+        
+        .file-remove {
+            background: none;
+            border: none;
+            color: #e53e3e;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+        
+        .file-remove:hover {
+            background: #fed7d7;
+        }
+        
+        .upload-progress {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .upload-status {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .required::after {
+            content: " *";
+            color: #e53e3e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Создание новой заявки</h1>
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/create" class="active">Создать заявку</a>
+                <a href="/dashboard">Панель управления</a>
+                <div class="user-nav" id="userNav"></div>
+            </nav>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="requestForm" enctype="multipart/form-data">
+                    <div class="form-section">
+                        <h2>Информация о клиенте</h2>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="client_name" class="required">ФИО клиента</label>
+                                <input type="text" id="client_name" name="client_name" required 
+                                       placeholder="Иванов Иван Иванович">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="phone" class="required">Телефон</label>
+                                <input type="tel" id="phone" name="phone" required 
+                                       placeholder="+7 (999) 123-45-67">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" name="email" 
+                                       placeholder="client@example.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Детали заявки</h2>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="category">Категория</label>
+                                <select id="category" name="category">
+                                    <option value="общая">Общая</option>
+                                    <option value="техническая">Техническая</option>
+                                    <option value="консультация">Консультация</option>
+                                    <option value="финансы">Финансы</option>
+                                    <option value="безопасность">Безопасность</option>
+                                    <option value="администрирование">Администрирование</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="priority">Приоритет</label>
+                                <select id="priority" name="priority">
+                                    <option value="низкий">Низкий</option>
+                                    <option value="средний" selected>Средний</option>
+                                    <option value="высокий">Высокий</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="request_text" class="required">Описание заявки</label>
+                            <textarea id="request_text" name="request_text" required 
+                                      placeholder="Подробно опишите проблему или вопрос..."
+                                      rows="6"></textarea>
+                            <div style="font-size: 0.875rem; color: #718096; margin-top: 0.5rem;">
+                                Рекомендуется указывать: что произошло, когда, в каких условиях, что уже было предпринято
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Прикрепленные файлы</h2>
+                        
+                        <div class="form-group">
+                            <label>Загрузка файлов (максимум 5 файлов, до 10MB каждый)</label>
+                            <div class="file-upload-area" id="dropArea">
+                                <div style="font-size: 3rem; color: #cbd5e0; margin-bottom: 1rem;">📎</div>
+                                <p><strong>Перетащите файлы сюда или кликните для выбора</strong></p>
+                                <p style="color: #718096; font-size: 0.875rem; margin-top: 0.5rem;">
+                                    Поддерживаемые форматы: изображения, PDF, документы Word/Excel, текстовые файлы, архивы
+                                </p>
+                                <input type="file" id="fileInput" multiple style="display: none;">
+                            </div>
+                            
+                            <div class="file-list" id="fileList"></div>
+                            <div class="upload-progress" id="uploadProgress" style="display: none;">
+                                <div class="progress-bar" id="progressBar"></div>
+                            </div>
+                            <div class="upload-status" id="uploadStatus"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="window.location.href='/dashboard'" 
+                                class="btn btn-secondary">
+                            Отмена
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            Отправить заявку
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="message" class="message" style="display: none;"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2026 Система обработки заявок. Все поля, отмеченные *, обязательны для заполнения.</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let selectedFiles = [];
+        
+        // Проверка авторизации
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/check');
+                const result = await response.json();
+                
+                if (result.authenticated) {
+                    currentUser = result.user;
+                    
+                    // Обновляем навигацию
+                    const userNav = document.getElementById('userNav');
+                    userNav.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar">${currentUser.username.charAt(0).toUpperCase()}</div>
+                            <span>${currentUser.full_name || currentUser.username} (${currentUser.role})</span>
+                        </div>
+                        <button onclick="logout()" class="btn-logout">Выйти</button>
+                    `;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Ошибка проверки авторизации:', error);
+            }
+        }
+        
+        // Инициализация drag & drop
+        function initFileUpload() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // Клик по области загрузки
+            dropArea.addEventListener('click', () => fileInput.click());
+            
+            // Выбор файлов через input
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Drag & drop события
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Подсветка при перетаскивании
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('dragover');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('dragover');
+            }
+            
+            // Обработка dropped файлов
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+        
+        function handleFiles(files) {
+            // Проверка количества файлов
+            if (selectedFiles.length + files.length > 5) {
+                showMessage('Максимум 5 файлов', 'error');
+                return;
+            }
+            
+            // Проверка каждого файла
+            for (const file of files) {
+                // Проверка размера (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showMessage(`Файл "${file.name}" слишком большой (максимум 10MB)`, 'error');
+                    continue;
+                }
+                
+                // Проверка типа файла
+                const allowedTypes = [
+                    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/plain',
+                    'application/zip',
+                    'application/x-rar-compressed'
+                ];
+                
+                if (!allowedTypes.includes(file.type)) {
+                    // Проверяем расширение как fallback
+                    const ext = file.name.toLowerCase().split('.').pop();
+                    const allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'];
+                    
+                    if (!allowedExts.includes(ext)) {
+                        showMessage(`Файл "${file.name}" имеет недопустимый формат`, 'error');
+                        continue;
+                    }
+                }
+                
+                // Добавляем файл в список
+                selectedFiles.push(file);
+            }
+            
+            // Обновляем отображение списка файлов
+            updateFileList();
+        }
+        
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            if (selectedFiles.length === 0) {
+                return;
+            }
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                // Получаем иконку в зависимости от типа файла
+                let icon = '📄';
+                if (file.type.startsWith('image/')) icon = '🖼️';
+                else if (file.type === 'application/pdf') icon = '📕';
+                else if (file.type.includes('word') || file.type.includes('document')) icon = '📝';
+                else if (file.type.includes('excel') || file.type.includes('spreadsheet')) icon = '📊';
+                else if (file.type.includes('zip') || file.type.includes('rar')) icon = '📦';
+                
+                const size = formatFileSize(file.size);
+                
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-icon">${icon}</div>
+                        <div>
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${size}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="file-remove" onclick="removeFile(${index})">×</button>
+                `;
+                
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+        
+        // Отправка формы
+        document.getElementById('requestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Отправка...';
+            
+            // Скрываем предыдущие сообщения
+            document.getElementById('message').style.display = 'none';
+            
+            // Проверяем обязательные поля
+            const clientName = document.getElementById('client_name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const requestText = document.getElementById('request_text').value.trim();
+            
+            if (!clientName || !phone || !requestText) {
+                showMessage('Заполните все обязательные поля', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            // Валидация телефона (простая проверка)
+            const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+            const cleanedPhone = phone.replace(/\s|\-|\(|\)/g, '');
+            if (!phoneRegex.test(cleanedPhone)) {
+                showMessage('Введите корректный номер телефона', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            // Создаем FormData
+            const formData = new FormData();
+            formData.append('client_name', clientName);
+            formData.append('phone', phone);
+            formData.append('email', document.getElementById('email').value.trim());
+            formData.append('request_text', requestText);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('priority', document.getElementById('priority').value);
+            
+            // Добавляем файлы
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            
+            // Показываем прогресс загрузки
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('uploadStatus').textContent = 'Отправка данных...';
+            
+            try {
+                const response = await fetch('/api/requests', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(`✅ Заявка #${result.request.id} успешно создана!`, 'success');
+                    
+                    // Очищаем форму
+                    document.getElementById('requestForm').reset();
+                    selectedFiles = [];
+                    updateFileList();
+                    document.getElementById('uploadProgress').style.display = 'none';
+                    document.getElementById('uploadStatus').textContent = '';
+                    
+                    // Автоматический редирект через 3 секунды
+                    setTimeout(() => {
+                        window.location.href = `/dashboard`;
+                    }, 3000);
+                } else {
+                    showMessage(result.error || 'Ошибка при создании заявки', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка отправки заявки:', error);
+                showMessage('Ошибка сети при отправке заявки', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            // Прокручиваем к сообщению
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Автоматически скрываем успешные сообщения через 5 секунд
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Выход из системы
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Ошибка выхода:', error);
+            }
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initFileUpload();
+            
+            // Маска для телефона
+            const phoneInput = document.getElementById('phone');
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length > 0) {
+                    if (!value.startsWith('7') && !value.startsWith('8')) {
+                        value = '7' + value;
+                    }
+                    
+                    let formatted = '+7';
+                    if (value.length > 1) {
+                        formatted += ' (' + value.substring(1, 4);
+                    }
+                    if (value.length >= 4) {
+                        formatted += ') ' + value.substring(4, 7);
+                    }
+                    if (value.length >= 7) {
+                        formatted += '-' + value.substring(7, 9);
+                    }
+                    if (value.length >= 9) {
+                        formatted += '-' + value.substring(9, 11);
+                    }
+                    
+                    e.target.value = formatted.substring(0, 18);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

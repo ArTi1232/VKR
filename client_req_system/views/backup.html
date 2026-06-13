@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление бэкапами</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .backup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .backup-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .backup-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .backup-list {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .backup-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .backup-table th,
+        .backup-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .backup-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+        }
+        
+        .backup-table tbody tr:hover {
+            background: #f7fafc;
+        }
+        
+        .backup-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .type-db {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .type-sql {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        
+        .backup-actions-cell {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 0.25rem 0.75rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-download {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-restore {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-download:hover, .btn-restore:hover, .btn-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .warning-icon {
+            font-size: 1.5rem;
+        }
+        
+        .warning-content {
+            flex: 1;
+        }
+        
+        .warning-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+        
+        .warning-text {
+            color: #856404;
+            font-size: 0.9rem;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Управление резервными копиями</h1>
+            <nav>
+                <a href="/dashboard">← Назад к панели</a>
+                <a href="/admin">Админ-панель</a>
+                <div class="user-nav" id="userNav"></div>
+            </nav>
+        </header>
+
+        <main>
+            <div class="warning-box">
+                <div class="warning-icon"></div>
+                <div class="warning-content">
+                    <div class="warning-title">Важная информация</div>
+                    <div class="warning-text">
+                        • Автоматические бэкапы создаются каждые 24 часа<br>
+                        • Хранится максимум 30 последних бэкапов<br>
+                        • Восстановление из бэкапа требует перезапуска сервера<br>
+                        • Рекомендуется регулярно скачивать бэкапы на локальный компьютер
+                    </div>
+                </div>
+            </div>
+
+            <div class="backup-header">
+                <h2>Бэкапы базы данных</h2>
+                <div class="backup-actions">
+                    <button onclick="createBackup('db')" class="btn btn-primary" id="createDbBtn">
+                         Создать бэкап БД
+                    </button>
+                    <button onclick="createBackup('sql')" class="btn btn-secondary" id="createSqlBtn">
+                         Создать SQL экспорт
+                    </button>
+                    <button onclick="loadBackups()" class="btn" id="refreshBtn">
+                        Обновить
+                    </button>
+                </div>
+            </div>
+
+            <div class="backup-stats" id="backupStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalBackups">0</div>
+                    <div class="stat-label">Всего бэкапов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSize">0 MB</div>
+                    <div class="stat-label">Общий размер</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="lastBackup">-</div>
+                    <div class="stat-label">Последний бэкап</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="autoBackup">Включено</div>
+                    <div class="stat-label">Автобэкап</div>
+                </div>
+            </div>
+
+            <div class="backup-list">
+                <div class="loading" id="loadingBackups">
+                    <div class="loading-spinner"></div>
+                    <p>Загрузка списка бэкапов...</p>
+                </div>
+                
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <h3>Бэкапы не найдены</h3>
+                    <p>Создайте свой первый бэкап базы данных</p>
+                    <button onclick="createBackup('db')" class="btn btn-primary" style="margin-top: 1rem;">
+                        Создать первый бэкап
+                    </button>
+                </div>
+                
+                <div id="backupsTable" style="display: none;">
+                    <table class="backup-table">
+                        <thead>
+                            <tr>
+                                <th>Имя файла</th>
+                                <th>Тип</th>
+                                <th>Размер</th>
+                                <th>Дата создания</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupsTableBody">
+                            <!-- Бэкапы загружаются через JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2024 Система обработки заявок. Автоматические бэкапы создаются каждые 24 часа.</p>
+        </footer>
+    </div>
+
+    <!-- Модальное окно восстановления -->
+    <div id="restoreModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeRestoreModal()">&times;</span>
+            <h2>Восстановление из бэкапа</h2>
+            
+            <div id="restoreMessage"></div>
+            
+            <div class="warning-box" style="margin: 1.5rem 0;">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-content">
+                    <div class="warning-title">Внимание! Критическое действие</div>
+                    <div class="warning-text">
+                        Восстановление из бэкапа перезапишет текущую базу данных.<br>
+                        Все текущие данные будут заменены данными из бэкапа.<br>
+                        Это действие необратимо!
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #f7fafc; padding: 1rem; border-radius: 8px; margin: 1.5rem 0;">
+                <p><strong>После восстановления:</strong></p>
+                <ul style="color: #718096; margin: 0.5rem 0 0 1rem; line-height: 1.6;">
+                    <li>Сервер необходимо перезапустить</li>
+                    <li>Все текущие сессии пользователей будут сброшены</li>
+                    <li>Новые данные, созданные после бэкапа, будут утеряны</li>
+                </ul>
+            </div>
+            
+            <div class="modal-actions">
+                <button onclick="closeRestoreModal()" class="btn btn-secondary">
+                    Отмена
+                </button>
+                <button onclick="confirmRestore()" class="btn btn-danger" id="confirmRestoreBtn">
+                    Подтвердить восстановление
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentBackupToRestore = null;
+        let backups = [];
+        
+        // Проверка авторизации
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/check');
+                const result = await response.json();
+                
+                if (result.authenticated && result.user.role === 'admin') {
+                    currentUser = result.user;
+                    
+                    // Обновляем навигацию
+                    const userNav = document.getElementById('userNav');
+                    userNav.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar">${currentUser.username.charAt(0).toUpperCase()}</div>
+                            <span>${currentUser.full_name || currentUser.username} (Админ)</span>
+                        </div>
+                        <button onclick="logout()" class="btn-logout">Выйти</button>
+                    `;
+                    
+                    // Загружаем бэкапы
+                    loadBackups();
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            } catch (error) {
+                console.error('Ошибка проверки авторизации:', error);
+                document.getElementById('loadingBackups').innerHTML = 
+                    '<p class="error">Ошибка соединения с сервером</p>';
+            }
+        }
+        
+        // Загрузка списка бэкапов
+        async function loadBackups() {
+            try {
+                document.getElementById('loadingBackups').style.display = 'block';
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('backupsTable').style.display = 'none';
+                
+                const refreshBtn = document.getElementById('refreshBtn');
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = 'Загрузка...';
+                
+                const response = await fetch('/api/backups');
+                backups = await response.json();
+                
+                updateBackupStats(backups);
+                
+                const tbody = document.getElementById('backupsTableBody');
+                tbody.innerHTML = '';
+                
+                if (backups.length === 0) {
+                    document.getElementById('loadingBackups').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+                
+                backups.forEach(backup => {
+                    const typeClass = backup.type === 'sql' ? 'type-sql' : 'type-db';
+                    const typeText = backup.type === 'sql' ? 'SQL' : 'DB';
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <strong>${backup.filename}</strong><br>
+                            <small style="color: #718096;">${backup.readable_size || formatFileSize(backup.size)}</small>
+                        </td>
+                        <td><span class="backup-type ${typeClass}">${typeText}</span></td>
+                        <td>${backup.readable_size || formatFileSize(backup.size)}</td>
+                        <td>${new Date(backup.created_at).toLocaleString()}</td>
+                        <td>
+                            <div class="backup-actions-cell">
+                                <button onclick="downloadBackup('${backup.filename}')" class="action-btn btn-download" title="Скачать">
+                                    Скачать
+                                </button>
+                                <button onclick="showRestoreModal('${backup.filename}')" class="action-btn btn-restore" title="Восстановить">
+                                    Восстановить
+                                </button>
+                                <button onclick="deleteBackup('${backup.filename}')" class="action-btn btn-delete" title="Удалить">
+                                    Удалить
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('loadingBackups').style.display = 'none';
+                document.getElementById('backupsTable').style.display = 'block';
+            } catch (error) {
+                console.error('Ошибка загрузки бэкапов:', error);
+                document.getElementById('loadingBackups').innerHTML = 
+                    '<p class="error">Ошибка загрузки списка бэкапов</p>';
+            } finally {
+                const refreshBtn = document.getElementById('refreshBtn');
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = 'Обновить';
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function updateBackupStats(backups) {
+            const totalBackups = backups.length;
+            const totalSize = backups.reduce((sum, b) => sum + b.size, 0);
+            const lastBackup = backups.length > 0 ? new Date(backups[0].created_at).toLocaleDateString() : '-';
+            
+            document.getElementById('totalBackups').textContent = totalBackups;
+            document.getElementById('totalSize').textContent = formatFileSize(totalSize);
+            document.getElementById('lastBackup').textContent = lastBackup;
+        }
+        
+        // Создание бэкапа
+        async function createBackup(type) {
+            const createDbBtn = document.getElementById('createDbBtn');
+            const createSqlBtn = document.getElementById('createSqlBtn');
+            const originalDbText = createDbBtn.innerHTML;
+            const originalSqlText = createSqlBtn.innerHTML;
+            
+            if (type === 'db') {
+                createDbBtn.disabled = true;
+                createDbBtn.innerHTML = 'Создание...';
+            } else {
+                createSqlBtn.disabled = true;
+                createSqlBtn.innerHTML = 'Создание...';
+            }
+            
+            try {
+                const response = await fetch('/api/backups/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Бэкап создан: ${result.backup.filename}`);
+                    loadBackups();
+                } else {
+                    alert(result.error || 'Ошибка создания бэкапа');
+                }
+            } catch (error) {
+                console.error('Ошибка создания бэкапа:', error);
+                alert('Ошибка сети при создании бэкапа');
+            } finally {
+                if (type === 'db') {
+                    createDbBtn.disabled = false;
+                    createDbBtn.innerHTML = originalDbText;
+                } else {
+                    createSqlBtn.disabled = false;
+                    createSqlBtn.innerHTML = originalSqlText;
+                }
+            }
+        }
+        
+        // Скачивание бэкапа
+        async function downloadBackup(filename) {
+            try {
+                // Создаем временную ссылку для скачивания
+                const link = document.createElement('a');
+                link.href = `/backups/${filename}`;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Показываем уведомление
+                showNotification(`Начато скачивание: ${filename}`, 'success');
+            } catch (error) {
+                console.error('Ошибка скачивания:', error);
+                alert('Ошибка при скачивании файла');
+            }
+        }
+        
+        // Показ модального окна восстановления
+        function showRestoreModal(filename) {
+            currentBackupToRestore = filename;
+            
+            const backup = backups.find(b => b.filename === filename);
+            if (!backup) return;
+            
+            const message = `
+                <p>Вы действительно хотите восстановить базу данных из бэкапа?</p>
+                <div style="background: #f7fafc; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <p><strong>Файл:</strong> ${backup.filename}</p>
+                    <p><strong>Размер:</strong> ${backup.readable_size || formatFileSize(backup.size)}</p>
+                    <p><strong>Дата создания:</strong> ${new Date(backup.created_at).toLocaleString()}</p>
+                </div>
+            `;
+            
+            document.getElementById('restoreMessage').innerHTML = message;
+            document.getElementById('restoreModal').style.display = 'block';
+        }
+        
+        function closeRestoreModal() {
+            document.getElementById('restoreModal').style.display = 'none';
+            currentBackupToRestore = null;
+        }
+        
+        // Подтверждение восстановления
+        async function confirmRestore() {
+            const button = document.getElementById('confirmRestoreBtn');
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = 'Восстановление...';
+            
+            try {
+                const response = await fetch('/api/backups/restore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename: currentBackupToRestore })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    closeRestoreModal();
+                    showNotification('База данных восстановлена. Требуется перезапуск сервера.', 'warning');
+                } else {
+                    alert((result.error || 'Ошибка восстановления'));
+                }
+            } catch (error) {
+                console.error('Ошибка восстановления:', error);
+                alert('Ошибка сети при восстановлении');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+        
+        // Удаление бэкапа
+        async function deleteBackup(filename) {
+            if (!confirm(`Удалить бэкап "${filename}"? Это действие нельзя отменить.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/backups/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`Бэкап "${filename}" удален`, 'success');
+                    loadBackups();
+                } else {
+                    alert(result.error || 'Ошибка удаления бэкапа');
+                }
+            } catch (error) {
+                console.error('Ошибка удаления бэкапа:', error);
+                alert('Ошибка сети при удалении бэкапа');
+            }
+        }
+        
+        // Показать уведомление
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                background: ${type === 'success' ? '#c6f6d5' : type === 'warning' ? '#feebc8' : '#fed7d7'};
+                color: ${type === 'success' ? '#22543d' : type === 'warning' ? '#744210' : '#742a2a'};
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                border-left: 4px solid ${type === 'success' ? '#38a169' : type === 'warning' ? '#ed8936' : '#e53e3e'};
+                animation: slideInRight 0.3s ease-out;
+                min-width: 300px;
+                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.2rem;">${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</span>
+                    <div style="flex: 1;">
+                        <strong>${message}</strong>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; cursor: pointer; color: inherit; font-size: 1.2rem;">
+                        ×
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Автоматическое удаление через 5 секунд
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Выход из системы
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Ошибка выхода:', error);
+            }
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', checkAuth);
+        
+        // Закрытие модальных окон
+        window.onclick = function(event) {
+            const modal = document.getElementById('restoreModal');
+            if (event.target === modal) {
+                closeRestoreModal();
+            }
+        };
+    </script>
+</body>
+</html>

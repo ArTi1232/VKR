@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница не найдена - 404</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 4rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 1rem;
+            line-height: 1;
+        }
+        
+        .error-title {
+            font-size: 2rem;
+            color: #4a5568;
+            margin-bottom: 1rem;
+        }
+        
+        .error-message {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        
+        .error-illustration {
+            font-size: 10rem;
+            margin-bottom: 2rem;
+            color: #e2e8f0;
+        }
+        
+        .home-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+        
+        .home-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Система заявок клиентов</h1>
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/create">Создать заявку</a>
+                <a href="/dashboard">Панель управления</a>
+                <div class="user-nav" id="userNav"></div>
+            </nav>
+        </header>
+
+        <main>
+            <div class="error-container">
+                <div class="error-illustration">🔍</div>
+                <div class="error-code">404</div>
+                <h2 class="error-title">Страница не найдена</h2>
+                
+                <p class="error-message">
+                    Извините, запрошенная страница не существует или была перемещена.
+                    Возможно, вы ввели неправильный адрес или страница была удалена.
+                </p>
+                
+                <div class="error-actions">
+                    <a href="/" class="btn btn-primary">
+                        🏠 На главную страницу
+                    </a>
+                    <a href="/dashboard" class="btn btn-secondary">
+                        📊 В панель управления
+                    </a>
+                    <button onclick="history.back()" class="btn">
+                        ↩️ Вернуться назад
+                    </button>
+                </div>
+                
+                <div style="margin-top: 3rem; padding: 1.5rem; background: #f7fafc; border-radius: 10px; text-align: left;">
+                    <h3 style="color: #4a5568; margin-bottom: 1rem;">Что можно сделать?</h3>
+                    <ul style="color: #718096; line-height: 1.8;">
+                        <li>Проверьте правильность введенного адреса</li>
+                        <li>Вернитесь на предыдущую страницу</li>
+                        <li>Перейдите на главную страницу</li>
+                        <li>Если проблема повторяется, свяжитесь с администратором</li>
+                    </ul>
+                </div>
+                
+                <a href="/" class="home-link">
+                    ← Вернуться на главную страницу
+                </a>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2024 Система обработки заявок. Код ошибки: 404 - Страница не найдена.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Проверяем авторизацию для отображения правильной навигации
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/check');
+                const result = await response.json();
+                
+                if (result.authenticated) {
+                    const userNav = document.getElementById('userNav');
+                    userNav.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar">${result.user.username.charAt(0).toUpperCase()}</div>
+                            <span>${result.user.full_name || result.user.username}</span>
+                        </div>
+                        <button onclick="logout()" class="btn-logout">Выйти</button>
+                    `;
+                }
+            } catch (error) {
+                console.error('Ошибка проверки авторизации:', error);
+            }
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Ошибка выхода:', error);
+            }
+        }
+        
+        // Проверяем авторизацию при загрузке
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

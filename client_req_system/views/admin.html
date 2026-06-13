@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель администратора</title>
+    <style>
+        /* Общие стили (адаптированы из предыдущей версии) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f7fafc;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            color: #2c5282;
+        }
+
+        nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #4a5568;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: #4299e1;
+            color: white;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #edf2f7;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: #4299e1;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .btn-logout {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #e53e3e;
+        }
+
+        /* Карточки статистики */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c5282;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        /* Админ панель */
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        .admin-sidebar {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .admin-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .admin-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.75rem 1rem;
+            color: #4a5568;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .admin-menu a:hover {
+            background: #f7fafc;
+            color: #667eea;
+        }
+
+        .admin-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .admin-content {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Таблицы */
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .user-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .role-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .role-admin {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .role-operator {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .status-active {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        .status-inactive {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        /* Формы */
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        /* Кнопки */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+
+        .btn-secondary {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+
+        .btn-secondary:hover {
+            background: #a0aec0;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin: 0 0.25rem;
+        }
+
+        .btn-edit {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c53030;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .close:hover {
+            color: #4a5568;
+        }
+
+        /* Логи */
+        .logs-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .error {
+            color: #e53e3e;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #718096;
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #718096;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Панель администратора</h1>
+            <nav>
+                <a href="/dashboard">Назад к панели</a>
+                <a href="/backup">Бэкапы</a>
+                <div class="user-nav" id="userNav"></div>
+            </nav>
+        </header>
+
+        <main>
+            <div class="admin-container">
+                <aside class="admin-sidebar">
+                    <h3>Меню администратора</h3>
+                    <ul class="admin-menu">
+                        <li><a href="#" class="active" data-section="users">Пользователи</a></li>
+                        <li><a href="#" data-section="system">Система</a></li>
+                        <li><a href="#" data-section="logs">Логи</a></li>
+                    </ul>
+                    
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                        <h4>Быстрые действия</h4>
+                        <button onclick="createTestData()" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
+                            Создать тестовые данные
+                        </button>
+                        <button onclick="clearOldRequests()" class="btn btn-warning" style="width: 100%; margin-top: 0.5rem;">
+                            Очистить старые заявки
+                        </button>
+                    </div>
+                </aside>
+
+                <div class="admin-content">
+                    <!-- Секция пользователей -->
+                    <div id="usersSection" class="admin-section active">
+                        <h2>Управление пользователями</h2>
+                        
+                        <div class="card" style="margin-bottom: 2rem;">
+                            <h3>Добавить нового пользователя</h3>
+                            <form id="addUserForm">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Имя пользователя *</label>
+                                        <input type="text" id="username" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Пароль *</label>
+                                        <input type="password" id="password" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Email</label>
+                                        <input type="email" id="email">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Полное имя</label>
+                                        <input type="text" id="full_name">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Роль</label>
+                                        <select id="role">
+                                            <option value="operator">Оператор</option>
+                                            <option value="admin">Администратор</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Статус</label>
+                                        <select id="is_active">
+                                            <option value="1">Активен</option>
+                                            <option value="0">Неактивен</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Добавить пользователя</button>
+                            </form>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>Список пользователей</h3>
+                                <button onclick="loadUsers()" class="btn btn-secondary">Обновить</button>
+                            </div>
+                            <div id="usersLoading" class="loading">Загрузка пользователей...</div>
+                            <div id="usersList" style="display: none;">
+                                <table class="user-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Имя пользователя</th>
+                                            <th>Email</th>
+                                            <th>Полное имя</th>
+                                            <th>Роль</th>
+                                            <th>Статус</th>
+                                            <th>Дата создания</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Секция системы -->
+                    <div id="systemSection" class="admin-section">
+                        <h2>Настройки системы</h2>
+                        
+                        <div class="card">
+                            <h3>Информация о системе</h3>
+                            <div id="systemInfo" class="loading">Загрузка информации...</div>
+                        </div>
+                        
+                        <div class="card" style="margin-top: 1rem;">
+                            <h3>Настройки email</h3>
+                            <div id="emailStatus" class="loading">Проверка...</div>
+                        </div>
+                        
+                        <div class="card" style="margin-top: 1rem;">
+                            <h3>Статистика системы</h3>
+                            <div id="systemStats" class="stats-grid">
+                                <div class="loading">Загрузка статистики...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Секция логов -->
+                    <div id="logsSection" class="admin-section">
+                        <h2>Логи системы</h2>
+                        
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>Последние события</h3>
+                                <div>
+                                    <select id="logLevel" onchange="loadLogs()">
+                                        <option value="all">Все уровни</option>
+                                        <option value="error">Только ошибки</option>
+                                        <option value="warn">Предупреждения</option>
+                                        <option value="info">Информация</option>
+                                    </select>
+                                    <button onclick="clearLogs()" class="btn btn-danger">Очистить логи</button>
+                                </div>
+                            </div>
+                            <div id="logsContainer" class="logs-container">
+                                Загрузка логов...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2024 Система обработки заявок. Панель администратора.</p>
+        </footer>
+    </div>
+
+    <!-- Модальное окно редактирования пользователя -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Редактирование пользователя</h2>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Имя пользователя</label>
+                    <input type="text" id="editUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editEmail">
+                </div>
+                <div class="form-group">
+                    <label>Полное имя</label>
+                    <input type="text" id="editFullName">
+                </div>
+                <div class="form-group">
+                    <label>Роль</label>
+                    <select id="editRole">
+                        <option value="operator">Оператор</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="editIsActive">
+                        <option value="1">Активен</option>
+                        <option value="0">Неактивен</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Новый пароль (оставьте пустым, чтобы не менять)</label>
+                    <input type="password" id="editPassword">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let editingUserId = null;
+
+        // Проверка авторизации
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/check');
+                const result = await response.json();
+                if (result.authenticated && result.user.role === 'admin') {
+                    currentUser = result.user;
+                    const userNav = document.getElementById('userNav');
+                    userNav.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar">${currentUser.username.charAt(0).toUpperCase()}</div>
+                            <span>${currentUser.full_name || currentUser.username} (Админ)</span>
+                        </div>
+                        <button onclick="logout()" class="btn-logout">Выйти</button>
+                    `;
+                    loadUsers();
+                    loadSystemInfo();
+                    loadLogs();
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            } catch (error) {
+                console.error('Ошибка авторизации:', error);
+                document.getElementById('usersLoading').innerHTML = '<p class="error">Ошибка соединения с сервером</p>';
+            }
+        }
+
+        // Переключение секций
+        document.querySelectorAll('.admin-menu a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sectionId = this.getAttribute('data-section');
+                document.querySelectorAll('.admin-menu a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(sectionId + 'Section').classList.add('active');
+            });
+        });
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            try {
+                document.getElementById('usersLoading').style.display = 'block';
+                document.getElementById('usersList').style.display = 'none';
+                const response = await fetch('/api/users');
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                const users = await response.json();
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+                users.forEach(user => {
+                    const roleClass = `role-${user.role}`;
+                    const statusText = user.is_active ? 'Активен' : 'Неактивен';
+                    const statusClass = user.is_active ? 'status-active' : 'status-inactive';
+                    const row = document.createElement('tr');
+                    // Формируем кнопки действий
+                    let actionsHtml = `
+                        <button onclick="editUser(${user.id})" class="action-btn btn-edit">Редактировать</button>
+                    `;
+                    // Кнопка активации/деактивации (не показываем для текущего пользователя)
+                    if (user.id !== currentUser.id) {
+                        actionsHtml += `
+                            <button onclick="toggleUserStatus(${user.id}, ${user.is_active})" class="action-btn ${user.is_active ? 'btn-warning' : 'btn-secondary'}">
+                                ${user.is_active ? 'Деактивировать' : 'Активировать'}
+                            </button>
+                        `;
+                    }
+                    // Кнопка удаления (не показываем для текущего пользователя)
+                    if (user.id !== currentUser.id) {
+                        actionsHtml += `
+                            <button onclick="deleteUser(${user.id})" class="action-btn btn-delete">Удалить</button>
+                        `;
+                    }
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td><strong>${escapeHtml(user.username)}</strong></td>
+                        <td>${escapeHtml(user.email || '-')}</td>
+                        <td>${escapeHtml(user.full_name || '-')}</td>
+                        <td><span class="role-badge ${roleClass}">${user.role === 'admin' ? 'Админ' : 'Оператор'}</span></td>
+                        <td class="${statusClass}">${statusText}</td>
+                        <td>${new Date(user.created_at).toLocaleString()}</td>
+                        <td>${actionsHtml}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                document.getElementById('usersLoading').style.display = 'none';
+                document.getElementById('usersList').style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                document.getElementById('usersLoading').innerHTML = '<p class="error">Ошибка загрузки пользователей</p>';
+            }
+        }
+
+        // Добавление пользователя
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value || undefined,
+                full_name: document.getElementById('full_name').value || undefined,
+                role: document.getElementById('role').value,
+                is_active: parseInt(document.getElementById('is_active').value)
+            };
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Пользователь создан');
+                    document.getElementById('addUserForm').reset();
+                    loadUsers();
+                } else {
+                    alert(result.error || 'Ошибка создания');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка сети');
+            }
+        });
+
+        // Редактирование пользователя
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`);
+                if (!response.ok) throw new Error('Не удалось загрузить данные');
+                const user = await response.json();
+                editingUserId = userId;
+                document.getElementById('editUserId').value = userId;
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editEmail').value = user.email || '';
+                document.getElementById('editFullName').value = user.full_name || '';
+                document.getElementById('editRole').value = user.role;
+                document.getElementById('editIsActive').value = user.is_active ? '1' : '0';
+                document.getElementById('editPassword').value = '';
+                document.getElementById('editUserModal').style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка загрузки данных пользователя');
+            }
+        }
+
+        // Сохранение изменений
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userData = {
+                username: document.getElementById('editUsername').value,
+                email: document.getElementById('editEmail').value || undefined,
+                full_name: document.getElementById('editFullName').value || undefined,
+                role: document.getElementById('editRole').value,
+                is_active: parseInt(document.getElementById('editIsActive').value)
+            };
+            const newPassword = document.getElementById('editPassword').value;
+            if (newPassword) userData.password = newPassword;
+            try {
+                const response = await fetch(`/api/users/${editingUserId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Изменения сохранены');
+                    closeEditModal();
+                    loadUsers();
+                } else {
+                    alert(result.error || 'Ошибка сохранения');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка сети');
+            }
+        });
+
+        function closeEditModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+            editingUserId = null;
+        }
+
+        // Переключение статуса пользователя (активация/деактивация)
+        async function toggleUserStatus(userId, isActive) {
+            const newStatus = !isActive;
+            if (!confirm(newStatus ? 'Активировать пользователя?' : 'Деактивировать пользователя?')) return;
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus ? 1 : 0 })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Пользователь ${newStatus ? 'активирован' : 'деактивирован'}`);
+                    loadUsers(); // обновляем список
+                } else {
+                    alert(result.error || 'Ошибка изменения статуса');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка сети');
+            }
+        }
+
+        // Удаление пользователя
+        async function deleteUser(userId) {
+            if (!confirm('Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.')) return;
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Пользователь удалён');
+                    loadUsers(); // обновляем список
+                } else {
+                    alert(result.error || 'Ошибка удаления пользователя');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка сети');
+            }
+        }
+
+        // Системная информация (получаем с сервера)
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/api/system/info');
+                if (response.ok) {
+                    const info = await response.json();
+                    document.getElementById('systemInfo').innerHTML = `
+                        <p><strong>Версия Node.js:</strong> ${info.nodeVersion || 'недоступно'}</p>
+                        <p><strong>Платформа:</strong> ${info.platform || 'недоступно'}</p>
+                        <p><strong>Время сервера:</strong> ${info.serverTime || new Date().toLocaleString()}</p>
+                        <p><strong>Загрузка CPU:</strong> ${info.cpuLoad || 'недоступно'}</p>
+                        <p><strong>Память:</strong> ${info.memoryUsage || 'недоступно'}</p>
+                    `;
+                } else {
+                    // fallback на клиентскую информацию
+                    document.getElementById('systemInfo').innerHTML = `
+                        <p><strong>Браузер:</strong> ${navigator.userAgent}</p>
+                        <p><strong>Разрешение экрана:</strong> ${screen.width}x${screen.height}</p>
+                        <p><strong>Таймзона:</strong> ${Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+                        <p><strong>Текущее время (клиент):</strong> ${new Date().toLocaleString()}</p>
+                    `;
+                }
+                // Email статус (заглушка, можно запросить отдельно)
+                document.getElementById('emailStatus').innerHTML = `
+                    <p>SMTP настройки задаются в файле .env. Для тестирования отправки email создайте заявку с указанием email клиента.</p>
+                    <button onclick="testEmail()" class="btn btn-secondary">Отправить тестовое письмо</button>
+                `;
+                await loadSystemStats();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('systemInfo').innerHTML = '<p class="error">Ошибка загрузки информации о системе</p>';
+            }
+        }
+
+        async function testEmail() {
+            try {
+                const response = await fetch('/api/test-email', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message || 'Тестовое письмо отправлено');
+            } catch (error) {
+                alert('Ошибка отправки тестового письма');
+            }
+        }
+
+        // Статистика системы
+        async function loadSystemStats() {
+            try {
+                const [requestsRes, usersRes] = await Promise.all([
+                    fetch('/api/requests'),
+                    fetch('/api/users')
+                ]);
+                const requests = await requestsRes.json();
+                const users = await usersRes.json();
+                const stats = {
+                    totalRequests: requests.length,
+                    newRequests: requests.filter(r => r.status === 'новая').length,
+                    inProgress: requests.filter(r => r.status === 'в обработке').length,
+                    completed: requests.filter(r => r.status === 'выполнена').length,
+                    totalUsers: users.length,
+                    activeUsers: users.filter(u => u.is_active).length
+                };
+                document.getElementById('systemStats').innerHTML = `
+                    <div class="stat-card"><div class="stat-value">${stats.totalRequests}</div><div class="stat-label">Всего заявок</div></div>
+                    <div class="stat-card"><div class="stat-value">${stats.newRequests}</div><div class="stat-label">Новые</div></div>
+                    <div class="stat-card"><div class="stat-value">${stats.inProgress}</div><div class="stat-label">В обработке</div></div>
+                    <div class="stat-card"><div class="stat-value">${stats.completed}</div><div class="stat-label">Выполнено</div></div>
+                    <div class="stat-card"><div class="stat-value">${stats.totalUsers}</div><div class="stat-label">Пользователи</div></div>
+                    <div class="stat-card"><div class="stat-value">${stats.activeUsers}</div><div class="stat-label">Активные</div></div>
+                `;
+            } catch (error) {
+                console.error(error);
+                document.getElementById('systemStats').innerHTML = '<p class="error">Ошибка загрузки статистики</p>';
+            }
+        }
+
+        // Логи
+        async function loadLogs() {
+            try {
+                const level = document.getElementById('logLevel').value;
+                const response = await fetch(`/api/logs?level=${level}`);
+                if (!response.ok) throw new Error();
+                const logs = await response.text();
+                document.getElementById('logsContainer').innerHTML = `<pre>${escapeHtml(logs)}</pre>`;
+            } catch (error) {
+                document.getElementById('logsContainer').innerHTML = '<p class="error">Ошибка загрузки логов</p>';
+            }
+        }
+
+        async function clearLogs() {
+            if (!confirm('Очистить все логи? Это действие нельзя отменить.')) return;
+            try {
+                const response = await fetch('/api/logs', { method: 'DELETE' });
+                if (response.ok) {
+                    alert('Логи очищены');
+                    loadLogs();
+                } else {
+                    alert('Ошибка очистки логов');
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Создание тестовых данных
+        async function createTestData() {
+            if (!confirm('Создать 10 тестовых заявок?')) return;
+            try {
+                const response = await fetch('/api/test-data', { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Создано ${result.count || 10} тестовых заявок`);
+                    loadSystemStats();
+                } else {
+                    alert(result.error || 'Ошибка создания тестовых данных');
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Очистка старых заявок (старше 30 дней)
+        async function clearOldRequests() {
+            if (!confirm('Удалить все заявки старше 30 дней? Это действие нельзя отменить.')) return;
+            try {
+                const response = await fetch('/api/requests/old', { method: 'DELETE' });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Удалено ${result.deletedCount || 0} старых заявок`);
+                    loadSystemStats();
+                } else {
+                    alert(result.error || 'Ошибка очистки');
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Выход
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        // Вспомогательные функции
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Закрытие модалки по клику вне
+        window.onclick = function(event) {
+            const modal = document.getElementById('editUserModal');
+            if (event.target === modal) closeEditModal();
+        };
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
