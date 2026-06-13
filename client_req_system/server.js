@@ -43,7 +43,6 @@ app.use(session({
     cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-// Проверка аутентификации
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) {
         if (req.xhr || req.headers.accept.includes('json')) {
@@ -421,8 +420,8 @@ setInterval(async () => {
     }
 }, 24 * 60 * 60 * 1000);
 
-server.listen(PORT, () => {
-    console.log(`✅ Сервер запущен на http://localhost:${PORT}`);
-    console.log(`🔐 Авторизация: http://localhost:${PORT}/login`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Сервер запущен на http://0.0.0.0:${PORT}`);
+    console.log(`🔐 Авторизация: http://89.104.94.152:${PORT}/login`);
     console.log(`👤 Администратор: admin / admin123`);
 });
